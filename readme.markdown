@@ -18,11 +18,10 @@ Depending on which user controller you would like the RememberMe functions to wo
 In order to log a user in and set the cookie information you can use something like this in your login action in your controller:
 
 	function members_login() {
-		if (!$this->Auth->user()) {
+		if ($this->Auth->user()) {
 			if (!empty($this->data)) {
 				$this->RememberMe->setRememberMe($this->data[$this->Member->alias]);
 			}
-		} else {
 			$this->redirect($this->Auth->loginRedirect);
 		}
 	}
