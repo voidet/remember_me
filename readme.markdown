@@ -1,4 +1,4 @@
-#CakePHP Read Me Component
+#CakePHP RememberMe Component
 
 Currently this is a very basic component that will handle a lot of cookie handling when dealing with autologins and CakePHP's Auth. The component takes in an array of the user's details and sets it into a cookie to use for future login attempts.
 
