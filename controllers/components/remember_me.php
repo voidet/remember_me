@@ -19,30 +19,31 @@ class RememberMeComponent extends Object {
 		if ($this->Auth->user()) {
 			if (!empty($userInfo[$this->settings['field_name']])) {
 				$this->controller->data[$this->Auth->userModel][$this->settings['field_name']] = 1;
-				$this->Session->write($this->Auth->userModel, $this->controller->data[$this->Auth->userModel]);
-				$this->Cookie->write($this->Auth->userModel, serialize($this->controller->data), true, $this->settings['timeout']);
+				$this->Session->write($this->Auth->sessionKey, $this->controller->data[$this->Auth->userModel]);
+				$this->Cookie->write($this->Cookie->name, serialize($this->controller->data), true, $this->settings['timeout']);
 			}
 		}
 	}
 
 	function checkUser() {
-		if ($this->Cookie->read($this->Auth->userModel) && !$this->Session->check($this->Auth->userModel)) {
-			$cookieData = unserialize($this->Cookie->read($this->Auth->userModel));
-			$this->Auth->login($cookieData);
-			$this->Session->write($cookieData);
-		} elseif ($this->Session->check($this->Auth->userModel.'.'.$this->settings['field_name']) && !$this->Cookie->read($this->Auth->userModel)) {
-			$this->Cookie->write($this->Auth->userModel, serialize($this->Session->read($this->Auth->userModel)), true, $this->settings['timeout']);
+		if ($this->Cookie->read($this->Cookie->name) && !$this->Session->check($this->Auth->sessionKey)) {
+			$cookieData = unserialize($this->Cookie->read($this->Cookie->name));
+			if ($this->Auth->login($cookieData)) {
+				$this->Session->write($this->Auth->sessionKey, $cookieData);
+			}
+		} elseif ($this->Session->check($this->Auth->sessionKey.'.'.$this->settings['field_name']) && !$this->Cookie->read($this->Cookie->name)) {
+			$this->Cookie->write($this->Cookie->name, serialize($this->Session->read($this->Auth->sessionKey)), true, $this->settings['timeout']);
 		}
 
-		if ($this->Cookie->read($this->Auth->userModel) && $this->Session->check($this->Auth->userModel) ) {
-			$cookieData = $this->Cookie->read($this->Auth->userModel);
-			$this->Cookie->write($this->Auth->userModel, $cookieData, true, $this->settings['timeout']);
+		if ($this->Cookie->read($this->Cookie->name) && $this->Session->check($this->Auth->sessionKey) ) {
+			$cookieData = $this->Cookie->read($this->Cookie->name);
+			$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
 		}
 	}
 
 	function logout() {
-		$this->Cookie->destroy();
-		$this->Session->delete($this->Auth->userModel);
+		$this->Cookie->delete($this->Cookie->name);
+		$this->Session->delete($this->Auth->sessionKey);
 		$this->controller->redirect($this->Auth->logout());
 	}
 
