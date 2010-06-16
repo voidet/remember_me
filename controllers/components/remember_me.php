@@ -19,7 +19,8 @@ class RememberMeComponent extends Object {
 		if ($this->Auth->user()) {
 			if (!empty($userInfo[$this->settings['field_name']])) {
 				$this->controller->data[$this->Auth->userModel][$this->settings['field_name']] = 1;
-				$this->Session->write($this->Auth->sessionKey, $this->controller->data[$this->Auth->userModel]);
+				$userData = array_merge($this->controller->data, $this->Auth->user());
+				$this->Session->write($this->Auth->sessionKey, $userData[$this->Auth->userModel]);
 				$this->Cookie->write($this->Cookie->name, serialize($this->controller->data), true, $this->settings['timeout']);
 			}
 		}
