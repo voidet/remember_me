@@ -10,20 +10,24 @@ class RememberMeComponent extends Object {
 			'token_salt' => 'token_salt'
 		);
 
-		$this->controller = &$controller;
+		$this->Controller = &$controller;
 		$this->Auth = &$controller->Auth;
 		$this->Cookie = &$controller->Cookie;
 		$this->Session = &$controller->Session;
 		$this->settings = array_merge($defaults, $settings);
-		if (empty($controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
-			//$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
-		}
 	}
 
 	private function initializeModel() {
 		if (!isset($this->userModel)) {
 			App::import('Model', $this->Auth->userModel);
 			$this->userModel = new $this->Auth->userModel();
+		}
+	}
+
+	public function setAuthScope() {
+		$fieldData = $this->Controller->data[$this->Auth->userModel][$this->settings['field_name']];
+		if ($this->Cookie->read($this->Cookie->name) && empty($fieldData) && $this->tokenSupports('token_field')) {
+			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
 		}
 	}
 
@@ -66,7 +70,7 @@ class RememberMeComponent extends Object {
 		$this->clearTokens($this->Auth->user('id'));
 		$this->Cookie->delete($this->Cookie->name);
 		$this->Session->delete($this->Auth->sessionKey);
-		$this->controller->redirect($this->Auth->logout());
+		$this->Controller->redirect($this->Auth->logout());
 	}
 
 	private function writeCookie() {
@@ -78,9 +82,9 @@ class RememberMeComponent extends Object {
 			}
 		} else {
 			foreach ($this->setBasicCookieFields as $keyField) {
-				$cookieFields[] = $this->controller->data['User'][$keyField];
+				$cookieFields[] = $this->Controller->data['User'][$keyField];
 			}
-			$this->Cookie->write($this->Cookie->name, serialize($this->controller->data), true, $this->settings['timeout']);
+			$this->Cookie->write($this->Cookie->name, serialize($this->Controller->data), true, $this->settings['timeout']);
 		}
 	}
 
