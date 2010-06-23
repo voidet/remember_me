@@ -25,8 +25,8 @@ class RememberMeComponent extends Object {
 	}
 
 	public function setAuthScope() {
-		$fieldData = $this->Controller->data[$this->Auth->userModel][$this->settings['field_name']];
-		if ($this->Cookie->read($this->Cookie->name) && empty($fieldData) && $this->tokenSupports('token_field')) {
+		if ($this->Cookie->read($this->Cookie->name) &&
+				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
 			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
 		}
 	}
