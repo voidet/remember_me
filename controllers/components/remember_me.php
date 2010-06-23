@@ -20,25 +20,25 @@ class RememberMeComponent extends Object {
 		}
 	}
 
-	function initializeModel() {
+	private function initializeModel() {
 		if (!isset($this->userModel)) {
 			App::import('Model', $this->Auth->userModel);
 			$this->userModel = new $this->Auth->userModel();
 		}
 	}
 
-	function tokenSupports($type = '') {
+	protected function tokenSupports($type = '') {
 		$this->initializeModel();
 		if ($this->userModel->schema($this->settings[$type]) && !empty($this->settings[$type])) {
 			return true;
 		}
 	}
 
-	function generateHash() {
+	public function generateHash() {
 		return Security::hash(String::uuid(), null, true);
 	}
 
-	function setRememberMe($userData) {
+	public function setRememberMe($userData) {
 		if ($this->Auth->user()) {
 			if (!empty($userData[$this->settings['field_name']])) {
 				$this->writeCookie();
@@ -46,7 +46,7 @@ class RememberMeComponent extends Object {
 		}
 	}
 
-	function checkUser() {
+	public function checkUser() {
 		if ($this->Cookie->read($this->Cookie->name) && !$this->Session->check($this->Auth->sessionKey)) {
 			if ($this->tokenSupports('token_field')) {
 				$cookieData = $this->checkTokens();
@@ -62,14 +62,14 @@ class RememberMeComponent extends Object {
 		}
 	}
 
-	function logout() {
+	public function logout() {
 		$this->clearTokens($this->Auth->user('id'));
 		$this->Cookie->delete($this->Cookie->name);
 		$this->Session->delete($this->Auth->sessionKey);
 		$this->controller->redirect($this->Auth->logout());
 	}
 
-	function writeCookie() {
+	private function writeCookie() {
 		if ($this->tokenSupports('token_field')) {
 			$tokens = $this->makeToken($this->Auth->user());
 			$this->userModel->id = $this->Auth->user('id');
@@ -84,12 +84,12 @@ class RememberMeComponent extends Object {
 		}
 	}
 
-	function rewriteCookie() {
+	public function rewriteCookie() {
 		$cookieData = $this->Cookie->read($this->Cookie->name);
 		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
 	}
 
-	function writeTokenCookie($tokens) {
+	private function writeTokenCookie($tokens) {
 		$cookieData[$this->Auth->fields['username']] = $this->Auth->user($this->Auth->fields['username']);
 		$cookieData[$this->settings['token_field']] = $tokens[$this->Auth->userModel][$this->settings['token_field']];
 		if ($this->tokenSupports('token_salt')) {
@@ -98,7 +98,7 @@ class RememberMeComponent extends Object {
 		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
 	}
 
-	function checkTokens() {
+	public function checkTokens() {
 		if ($this->tokenSupports('token_field')) {
 			$this->initializeModel();
 			$fields = $this->setTokenFields();
@@ -116,12 +116,12 @@ class RememberMeComponent extends Object {
 		}
 	}
 
-	function setBasicCookieFields() {
+	private function setBasicCookieFields() {
 		$fields = array($this->Auth->fields['username'], $this->Auth->fields['password']);
 		return $fields;
 	}
 
-	function setTokenFields() {
+	private function setTokenFields() {
 		$fields = array($this->Auth->fields['username'], $this->settings['token_field']);
 		if ($this->tokenSupports('token_salt')) {
 			$fields[] = $this->settings['token_salt'];
@@ -129,7 +129,7 @@ class RememberMeComponent extends Object {
 		return $fields;
 	}
 
-	function prepForOr($data) {
+	private function prepForOr($data) {
 		$query['username'] = $data[$this->Auth->fields['username']];
 		$query['OR'][$this->settings['token_field']] = $data[$this->settings['token_field']];
 		if ($this->tokenSupports('token_salt')) {
@@ -138,14 +138,14 @@ class RememberMeComponent extends Object {
 		return $query;
 	}
 
-	function getUserByTokens($cookieData) {
+	public function getUserByTokens($cookieData) {
 		$this->initializeModel();
 		$fields = array('id');
 		$fields = array_merge($fields, $this->setTokenFields());
 		return $this->userModel->find('first', array('fields' => array_values($fields), 'conditions' => $this->prepForOr($cookieData), 'recursive' => -1));
 	}
 
-	function handleHijack($cookieData, $user) {
+	private function handleHijack($cookieData, $user) {
 		if (($cookieData[$this->settings['token_salt']] == $user[$this->Auth->userModel][$this->settings['token_salt']] &&
 			$cookieData[$this->settings['token_field']] != $user[$this->Auth->userModel][$this->settings['token_field']]) ||
 			($cookieData[$this->settings['token_salt']] != $user[$this->Auth->userModel][$this->settings['token_salt']])) {
@@ -154,7 +154,7 @@ class RememberMeComponent extends Object {
 			}
 	}
 
-	function clearTokens($id) {
+	public function clearTokens($id) {
 		$this->initializeModel();
 		$this->userModel->id = $id;
 		$userOverride[$this->Auth->userModel][$this->settings['token_field']] = null;
@@ -164,7 +164,7 @@ class RememberMeComponent extends Object {
 		$this->userModel->save($userOverride);
 	}
 
-	function makeToken($user = array()) {
+	private function makeToken($user = array()) {
 		if (!empty($user) && !empty($this->settings['token_field'])) {
 			$this->initializeModel();
 			if ($this->tokenSupports('token_field')) {
