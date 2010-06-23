@@ -16,7 +16,7 @@ class RememberMeComponent extends Object {
 		$this->Session = &$controller->Session;
 		$this->settings = array_merge($defaults, $settings);
 		if (empty($controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
-			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
+			//$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
 		}
 	}
 
