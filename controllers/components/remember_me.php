@@ -52,7 +52,9 @@ class RememberMeComponent extends Object {
 		if ($this->Cookie->read($this->Cookie->name) && !$this->Session->check($this->Auth->sessionKey)) {
 			if ($this->tokenSupports('token_field')) {
 				$cookieData = $this->checkTokens();
-				$this->Auth->login($cookieData['User']['id']);
+				if ($cookieData) {
+					$this->Auth->login($cookieData['User']['id']);
+				}
 			} else {
 				$cookieData = unserialize($this->Cookie->read($this->Cookie->name));
 				$this->Auth->login($cookieData);
@@ -108,7 +110,7 @@ class RememberMeComponent extends Object {
 			if (is_array($cookieData) && array_values($fields) === array_keys($cookieData)) {
 				$user = $this->getUserByTokens($cookieData);
 				if (!empty($user) && $this->tokenSupports('token_salt') && $this->handleHijack($cookieData, $user)) {
-
+					return false;
 				} elseif (empty($user)) {
 					$this->logout();
 				} else {
