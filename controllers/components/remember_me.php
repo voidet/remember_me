@@ -4,28 +4,32 @@ class RememberMeComponent extends Object {
 
 	public $components = array('Auth', 'Cookie', 'Session');
 
-	function initialize(&$controller, $settings = array()) {
+	function initialize(&$Controller, $settings = array()) {
 		$defaults = array(
 			'timeout' => '+30 days',
 			'field_name' => 'remember_me',
 			'token_field' => 'token',
 			'token_salt' => 'token_salt'
 		);
-		$this->Controller = &$controller;
+		$this->Controller = &$Controller;
 		$this->settings = array_merge($defaults, $settings);
+	}
+
+	function startup(&$Controller) {
+		$this->checkUser();
+	}
+
+	public function setUserScope() {
+		if ($this->Cookie->read($this->Cookie->name) &&
+				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
+			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
+		}
 	}
 
 	private function initializeModel() {
 		if (!isset($this->userModel)) {
 			App::import('Model', $this->Auth->userModel);
 			$this->userModel = new $this->Auth->userModel();
-		}
-	}
-
-	public function setAuthScope() {
-		if ($this->Cookie->read($this->Cookie->name) &&
-				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
-			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
 		}
 	}
 
@@ -61,7 +65,7 @@ class RememberMeComponent extends Object {
 			}
 		}
 
-		if ($this->Cookie->read($this->Cookie->name) && $this->Session->check($this->Auth->sessionKey) ) {
+		if ($this->Cookie->read($this->Cookie->name) && $this->Session->check($this->Auth->sessionKey)) {
 			$this->rewriteCookie();
 		}
 	}
@@ -139,7 +143,8 @@ class RememberMeComponent extends Object {
 		if ($this->tokenSupports('token_salt')) {
 			$query['OR'][$this->settings['token_salt']] = $data[$this->settings['token_salt']];
 		}
-		return $query;
+		$conditions = array_merge($query, $this->Auth->userScope);
+		return $conditions;
 	}
 
 	public function getUserByTokens($cookieData) {
