@@ -2,6 +2,8 @@
 
 class RememberMeComponent extends Object {
 
+	public $components = array('Auth', 'Cookie', 'Session');
+
 	function initialize(&$controller, $settings = array()) {
 		$defaults = array(
 			'timeout' => '+30 days',
@@ -9,11 +11,7 @@ class RememberMeComponent extends Object {
 			'token_field' => 'token',
 			'token_salt' => 'token_salt'
 		);
-
 		$this->Controller = &$controller;
-		$this->Auth = &$controller->Auth;
-		$this->Cookie = &$controller->Cookie;
-		$this->Session = &$controller->Session;
 		$this->settings = array_merge($defaults, $settings);
 	}
 
