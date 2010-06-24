@@ -120,8 +120,13 @@ class RememberMeComponent extends Object {
 	* logout clears user Cookie, Session and flushes tokens & salt from the database then redirects to logout action.
 	* @return false
 	*/
-	public function logout() {
-		$this->clearTokens($this->Auth->user('id'));
+	public function logout($user = array()) {
+		if ($this->tokenSupports('token_field')) {
+			if (empty($user) && $this->Auth->user()) {
+				$user = $this->Auth->user();
+			}
+			$this->clearTokens($user[$this->Auth->userModel]['id']);
+		}
 		$this->Cookie->delete($this->Cookie->name);
 		$this->Session->delete($this->Auth->sessionKey);
 		$this->Controller->redirect($this->Auth->logout());
@@ -247,7 +252,7 @@ class RememberMeComponent extends Object {
 		if (($cookieData[$this->settings['token_salt']] == $user[$this->Auth->userModel][$this->settings['token_salt']] &&
 			$cookieData[$this->settings['token_field']] != $user[$this->Auth->userModel][$this->settings['token_field']]) ||
 			($cookieData[$this->settings['token_salt']] != $user[$this->Auth->userModel][$this->settings['token_salt']])) {
-				$this->logout();
+				$this->logout($user);
 				return true;
 			}
 	}
