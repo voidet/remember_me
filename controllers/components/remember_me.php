@@ -168,7 +168,7 @@ class RememberMeComponent extends Object {
 		if ($this->tokenSupports('token_field')) {
 			$tokens = $this->makeToken($userData);
 			$this->userModel->id = $userData[$this->Auth->userModel]['id'];
-			if ($this->userModel->save($tokens)) {
+			if ($this->userModel->id && $this->userModel->save($tokens)) {
 				$this->writeTokenCookie($tokens, $userData);
 			}
 		} else {
@@ -190,8 +190,8 @@ class RememberMeComponent extends Object {
 			}
 			$this->clearTokens($user[$this->Auth->userModel]['id']);
 		}
-		$this->Cookie->delete($this->Cookie->name);
-		$this->Session->delete($this->Auth->sessionKey);
+		$this->Cookie->destroy();
+		$this->Session->destroy();
 		$this->Controller->redirect($this->Auth->logout());
 	}
 
@@ -275,7 +275,9 @@ class RememberMeComponent extends Object {
 		if ($this->tokenSupports('token_salt')) {
 			$userOverride[$this->Auth->userModel][$this->settings['token_salt']] = null;
 		}
-		$this->userModel->save($userOverride);
+		if ($id) {
+			$this->userModel->save($userOverride);
+		}
 	}
 
 /**
