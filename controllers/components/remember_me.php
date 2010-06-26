@@ -295,7 +295,11 @@ class RememberMeComponent extends Object {
 						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->generateHash();
 					}
 				}
-				$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->generateHash();
+				if (!empty($this->Controller->data[$this->Auth->userModel]) && $this->Auth->user($this->settings['token_field'])) {
+					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->Auth->user($this->settings['token_field']);
+				} else {
+					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->generateHash();
+				}
 				return $tokens;
 			}
 		}
