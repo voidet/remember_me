@@ -20,33 +20,13 @@ class RememberMeComponent extends Object {
 */
 	function initialize(&$Controller, $settings = array()) {
 		$defaults = array(
-			'timeout' => '+30 days',
+			'timeout' => '+1 month',
 			'field_name' => 'remember_me',
 			'token_field' => 'token',
 			'token_salt' => 'token_salt'
 		);
 		$this->Controller = &$Controller;
 		$this->settings = array_merge($defaults, $settings);
-	}
-
-/**
-	* Startup method executes the public checkUser method
-	* @return false
-	*/
-	function startup(&$Controller) {
-		$this->checkUser();
-	}
-
-/**
-	* setUserScope public method must be called manually in beforeFilter
-	* It will then add in extra userscope conditions to authorise a user against
-	* @return false
-	*/
-	public function setUserScope() {
-		if ($this->Cookie->read($this->Cookie->name) &&
-				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
-			$this->Auth->userScope += array($this->Auth->userModel.'.'.$this->settings['token_field'].' <>' => null);
-		}
 	}
 
 /**
@@ -88,8 +68,47 @@ class RememberMeComponent extends Object {
 	public function setRememberMe($userData) {
 		if ($this->Auth->user()) {
 			if (!empty($userData[$this->settings['field_name']])) {
-				$this->writeCookie();
+				$this->writeCookie($this->Auth->user());
 			}
+		}
+	}
+
+/**
+	* writeTokenCookie stores token information and username in a cookie for future cross referencing
+	* @param tokens array holds token and token salt
+	* @return false
+	*/
+	private function writeTokenCookie($tokens = array(), $userData = array()) {
+		$cookieData[$this->Auth->fields['username']] = $userData[$this->Auth->userModel][$this->Auth->fields['username']];
+		$cookieData[$this->settings['token_field']] = $tokens[$this->Auth->userModel][$this->settings['token_field']];
+		if ($this->tokenSupports('token_salt')) {
+			$cookieData[$this->settings['token_salt']] = $tokens[$this->Auth->userModel][$this->settings['token_salt']];
+		}
+		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
+	}
+
+/**
+	* setupUser Simple dispatcher for setting up extra userScope params and checking the user's cookie
+	* @return false
+	*/
+	public function setupUser() {
+		$this->setUserScope();
+		$this->checkUser();
+	}
+
+/**
+	* setUserScope public method must be called manually in beforeFilter
+	* It will then add in extra userscope conditions to authorise a user against
+	* param
+	* @return false
+	*/
+	protected function setUserScope() {
+		if ($this->Cookie->read($this->Cookie->name) &&
+				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
+			$tokenField = $this->Auth->userModel.'.'.$this->settings['token_field'];
+			$cookieData = $this->Cookie->read($this->Cookie->name);
+			unset($this->Auth->userScope[$tokenField]);
+			$this->Auth->userScope += array($tokenField => $cookieData[$this->settings['token_field']]);
 		}
 	}
 
@@ -101,9 +120,10 @@ class RememberMeComponent extends Object {
 	public function checkUser() {
 		if ($this->Cookie->read($this->Cookie->name) && !$this->Session->check($this->Auth->sessionKey)) {
 			if ($this->tokenSupports('token_field')) {
-				$cookieData = $this->checkTokens();
-				if ($cookieData) {
-					$this->Auth->login($cookieData['User']['id']);
+				$userData = $this->checkTokens();
+				if ($userData) {
+					$this->setUserScope();
+					$this->Auth->login($userData[$this->Auth->userModel]['id']);
 				}
 			} else {
 				$cookieData = unserialize($this->Cookie->read($this->Cookie->name));
@@ -113,6 +133,49 @@ class RememberMeComponent extends Object {
 
 		if ($this->Cookie->read($this->Cookie->name) && $this->Session->check($this->Auth->sessionKey)) {
 			$this->rewriteCookie();
+		}
+	}
+
+/**
+	* checkTokens A method determining whether or not the user matches the information in its RememberMe cookie
+	* @return array
+	*/
+	public function checkTokens() {
+		if ($this->tokenSupports('token_field')) {
+			$this->initializeModel();
+			$fields = $this->setTokenFields();
+			$cookieData = $this->Cookie->read($this->Cookie->name);
+			if (is_array($cookieData) && array_values($fields) === array_keys($cookieData)) {
+				$user = $this->getUserByTokens($cookieData);
+				if (!empty($user) && $this->tokenSupports('token_salt') && $this->handleHijack($cookieData, $user)) {
+					return false;
+				} elseif (empty($user)) {
+					$this->logout();
+				} else {
+					$this->writeCookie($user);
+					return $user;
+				}
+			}
+		}
+	}
+
+/**
+	* writeCookie Tests if a token should be used or failover to basic cookie auth
+	* if token method then generate tokens and assign them to a user then save
+	* @return false
+	*/
+	private function writeCookie($userData = array()) {
+		if ($this->tokenSupports('token_field')) {
+			$tokens = $this->makeToken($userData);
+			$this->userModel->id = $userData[$this->Auth->userModel]['id'];
+			if ($this->userModel->save($tokens)) {
+				$this->writeTokenCookie($tokens, $userData);
+			}
+		} else {
+			foreach ($this->setBasicCookieFields() as $keyField) {
+				$cookieFields[] = $this->Controller->data['User'][$keyField];
+			}
+			$this->Cookie->write($this->Cookie->name, serialize($this->Controller->data), true, $this->settings['timeout']);
 		}
 	}
 
@@ -133,68 +196,12 @@ class RememberMeComponent extends Object {
 	}
 
 /**
-	* writeCookie Tests if a token should be used or failover to basic cookie auth
-	* if token method then generate tokens and assign them to a user then save
-	* @return false
-	*/
-	private function writeCookie() {
-		if ($this->tokenSupports('token_field')) {
-			$tokens = $this->makeToken($this->Auth->user());
-			$this->userModel->id = $this->Auth->user('id');
-			if ($this->userModel->save($tokens)) {
-				$this->writeTokenCookie($tokens);
-			}
-		} else {
-			foreach ($this->setBasicCookieFields() as $keyField) {
-				$cookieFields[] = $this->Controller->data['User'][$keyField];
-			}
-			$this->Cookie->write($this->Cookie->name, serialize($this->Controller->data), true, $this->settings['timeout']);
-		}
-	}
-
-/**
 	* rewriteCookie updates the timeout of the cookie from last action
 	* @return false
 	*/
 	public function rewriteCookie() {
 		$cookieData = $this->Cookie->read($this->Cookie->name);
 		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
-	}
-
-/**
-	* writeTokenCookie stores token information and username in a cookie for future cross referencing
-	* @param tokens array holds token and token salt
-	* @return false
-	*/
-	private function writeTokenCookie($tokens) {
-		$cookieData[$this->Auth->fields['username']] = $this->Auth->user($this->Auth->fields['username']);
-		$cookieData[$this->settings['token_field']] = $tokens[$this->Auth->userModel][$this->settings['token_field']];
-		if ($this->tokenSupports('token_salt')) {
-			$cookieData[$this->settings['token_salt']] = $tokens[$this->Auth->userModel][$this->settings['token_salt']];
-		}
-		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
-	}
-
-/**
-	* checkTokens A method determining whether or not the user matches the information in its RememberMe cookie
-	* @return array
-	*/
-	public function checkTokens() {
-		if ($this->tokenSupports('token_field')) {
-			$this->initializeModel();
-			$fields = $this->setTokenFields();
-			$cookieData = $this->Cookie->read($this->Cookie->name);
-			if (is_array($cookieData) && array_values($fields) === array_keys($cookieData)) {
-				$user = $this->getUserByTokens($cookieData);
-				if (!empty($user) && $this->tokenSupports('token_salt') && $this->handleHijack($cookieData, $user)) {
-					return false;
-				} elseif (empty($user)) {
-					$this->logout();
-				} else {
-					return $user;
-				}
-			}
-		}
 	}
 
 /**
@@ -280,7 +287,11 @@ class RememberMeComponent extends Object {
 			$this->initializeModel();
 			if ($this->tokenSupports('token_field')) {
 				if ($this->tokenSupports('token_salt')) {
-					$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->generateHash();
+					if ($this->Cookie->read($this->Cookie->name.'.'.$this->settings['token_salt'])) {
+						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->Cookie->read($this->Cookie->name.'.'.$this->settings['token_salt']);
+					} else {
+						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->generateHash();
+					}
 				}
 				$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->generateHash();
 				return $tokens;
