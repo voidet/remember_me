@@ -47,7 +47,7 @@ class RememberMeComponent extends Object {
 	*/
 	protected function tokenSupports($type = '') {
 		$this->initializeModel();
-		if ($this->userModel->schema($this->settings[$type]) && !empty($this->settings[$type])) {
+		if (@$this->userModel->schema($this->settings[$type]) && !empty($this->settings[$type])) {
 			return true;
 		}
 	}
