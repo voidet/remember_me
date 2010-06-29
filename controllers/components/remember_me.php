@@ -123,7 +123,7 @@ class RememberMeComponent extends Object {
 				$userData = $this->checkTokens();
 				if ($userData) {
 					$this->setUserScope();
-					$this->Auth->login($userData[$this->Auth->userModel]['id']);
+					$this->Auth->login($userData[$this->Auth->userModel][$this->userModel->primaryKey]);
 				}
 			} else {
 				$cookieData = unserialize($this->Cookie->read($this->Cookie->name));
@@ -150,7 +150,7 @@ class RememberMeComponent extends Object {
 				if (!empty($user) && $this->tokenSupports('token_salt') && $this->handleHijack($cookieData, $user)) {
 					return false;
 				} elseif (empty($user)) {
-					$this->logout();
+					$this->logout(false);
 				} else {
 					$this->writeCookie($user);
 					return $user;
@@ -167,7 +167,7 @@ class RememberMeComponent extends Object {
 	private function writeCookie($userData = array()) {
 		if ($this->tokenSupports('token_field')) {
 			$tokens = $this->makeToken($userData);
-			$this->userModel->id = $userData[$this->Auth->userModel]['id'];
+			$this->userModel->id = $userData[$this->Auth->userModel][$this->userModel->primaryKey];
 			if ($this->userModel->id && $this->userModel->save($tokens)) {
 				$this->writeTokenCookie($tokens, $userData);
 			}
@@ -181,14 +181,17 @@ class RememberMeComponent extends Object {
 
 /**
 	* logout clears user Cookie, Session and flushes tokens & salt from the database then redirects to logout action.
+	* @param bool Handles whether to clear out all tokens and salt (manual logout) or keep Authentic user in but kick hijackers out
+	* @param array Holds user data to be used for clearing out fields
 	* @return false
 	*/
-	public function logout($user = array()) {
-		if ($this->tokenSupports('token_field')) {
+	public function logout($flushTokens = false, $user = array()) {
+		//A Manual logout called, log out all users, not just hijackers
+		if ($this->tokenSupports('token_field') && $flushTokens === true) {
 			if (empty($user) && $this->Auth->user()) {
 				$user = $this->Auth->user();
 			}
-			$this->clearTokens($user[$this->Auth->userModel]['id']);
+			$this->clearTokens($user[$this->Auth->userModel][$this->userModel->primaryKey]);
 		}
 		$this->Cookie->destroy();
 		$this->Session->destroy();
@@ -245,7 +248,7 @@ class RememberMeComponent extends Object {
 	*/
 	public function getUserByTokens($cookieData) {
 		$this->initializeModel();
-		$fields = array('id');
+		$fields = array($this->userModel->primaryKey);
 		$fields = array_merge($fields, $this->setTokenFields());
 		return $this->userModel->find('first', array('fields' => array_values($fields), 'conditions' => $this->prepForOr($cookieData), 'recursive' => -1));
 	}
@@ -259,7 +262,7 @@ class RememberMeComponent extends Object {
 		if (($cookieData[$this->settings['token_salt']] == $user[$this->Auth->userModel][$this->settings['token_salt']] &&
 			$cookieData[$this->settings['token_field']] != $user[$this->Auth->userModel][$this->settings['token_field']]) ||
 			($cookieData[$this->settings['token_salt']] != $user[$this->Auth->userModel][$this->settings['token_salt']])) {
-				$this->logout($user);
+				$this->logout(false, $user);
 				return true;
 			}
 	}
@@ -289,13 +292,13 @@ class RememberMeComponent extends Object {
 			$this->initializeModel();
 			if ($this->tokenSupports('token_field')) {
 				if ($this->tokenSupports('token_salt')) {
-					if ($this->Cookie->read($this->Cookie->name.'.'.$this->settings['token_salt'])) {
-						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->Cookie->read($this->Cookie->name.'.'.$this->settings['token_salt']);
+					if (!empty($user[$this->Auth->userModel]['token_salt'])) {
+						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $user[$this->Auth->userModel]['token_salt'];
 					} else {
 						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->generateHash();
 					}
 				}
-				if (!empty($this->Controller->data[$this->Auth->userModel]) && $this->Auth->user($this->settings['token_field'])) {
+				if (empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->Auth->user($this->settings['token_field'])) {
 					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->Auth->user($this->settings['token_field']);
 				} else {
 					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->generateHash();
