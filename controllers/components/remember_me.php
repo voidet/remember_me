@@ -185,7 +185,7 @@ class RememberMeComponent extends Object {
 	* @param array Holds user data to be used for clearing out fields
 	* @return false
 	*/
-	public function logout($flushTokens = false, $user = array()) {
+	public function logout($flushTokens = false, $user = array(), $redirect = true) {
 		//A Manual logout called, log out all users, not just hijackers
 		if ($this->tokenSupports('token_field') && $flushTokens === true) {
 			if (empty($user) && $this->Auth->user()) {
@@ -195,7 +195,11 @@ class RememberMeComponent extends Object {
 		}
 		$this->Cookie->destroy();
 		$this->Session->destroy();
-		$this->Controller->redirect($this->Auth->logout());
+		if ($redirect == true) {
+			$this->Controller->redirect($this->Auth->logout());
+		} else {
+			$this->Auth->logout();
+		}
 	}
 
 /**
