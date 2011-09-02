@@ -173,7 +173,7 @@ class RememberMeComponent extends Object {
 			}
 		} else {
 			foreach ($this->setBasicCookieFields() as $keyField) {
-				$cookieFields[] = $this->Controller->data['User'][$keyField];
+				$cookieFields[] = $this->Controller->data[$this->Auth->userModel][$keyField];
 			}
 			$this->Cookie->write($this->Cookie->name, serialize($this->Controller->data), true, $this->settings['timeout']);
 		}
