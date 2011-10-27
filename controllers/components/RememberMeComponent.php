@@ -35,6 +35,17 @@ class RememberMeComponent extends Component {
 	*/
 	private function initializeModel() {
 		if (!isset($this->userModel)) {
+			$userModel = '';
+			foreach ($this->Auth->authenticate as $adapter) {
+				if (!empty($adapter['userModel'])) {
+					$userModel = $adapter;
+					break;
+				}
+			}
+			if (empty($userModel)) {
+				die('Please specify what user model to authenticate against');
+			}
+			debug($this->Auth);
 			$this->rememberMeAuthSettings = $this->Auth->_authenticateObjects[0]->settings;
 			$userModel = $this->rememberMeAuthSettings['userModel'];
 			App::import('Model', $userModel);
@@ -82,9 +93,9 @@ class RememberMeComponent extends Component {
 	*/
 	private function writeTokenCookie($tokens = array(), $userData = array()) {
 		$cookieData[$this->rememberMeAuthSettings['fields']['username']] = $userData[$this->rememberMeAuthSettings['fields']['username']];
-		$cookieData[$this->settings['token_field']] = $tokens[$this->Auth->userModel][$this->settings['token_field']];
+		$cookieData[$this->settings['token_field']] = $tokens[$this->settings['token_field']];
 		if ($this->tokenSupports('token_salt')) {
-			$cookieData[$this->settings['token_salt']] = $tokens[$this->Auth->userModel][$this->settings['token_salt']];
+			$cookieData[$this->settings['token_salt']] = $tokens[$this->settings['token_salt']];
 		}
 		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
 	}
@@ -101,7 +112,6 @@ class RememberMeComponent extends Component {
 /**
 	* setUserScope public method must be called manually in beforeFilter
 	* It will then add in extra userscope conditions to authorise a user against
-	* param
 	* @return false
 	*/
 	protected function setUserScope() {
@@ -125,7 +135,7 @@ class RememberMeComponent extends Component {
 				$userData = $this->checkTokens();
 				if ($userData) {
 					$this->setUserScope();
-					$this->Auth->login($userData[$this->Auth->userModel][$this->userModel->primaryKey]);
+					$this->Auth->login($userData[$this->userModel->primaryKey]);
 				}
 			} else {
 				$cookieData = unserialize($this->Cookie->read($this->Cookie->name));
@@ -193,7 +203,7 @@ class RememberMeComponent extends Component {
 			if (empty($user) && $this->Auth->user()) {
 				$user = $this->Auth->user();
 			}
-			$this->clearTokens($user[$this->Auth->userModel][$this->userModel->primaryKey]);
+			$this->clearTokens($user[$this->userModel->primaryKey]);
 		}
 		$this->Cookie->destroy();
 		$this->Session->destroy();
@@ -265,9 +275,9 @@ class RememberMeComponent extends Component {
 	* @return bool
 	*/
 	private function handleHijack($cookieData, $user) {
-		if (($cookieData[$this->settings['token_salt']] == $user[$this->Auth->userModel][$this->settings['token_salt']] &&
-			$cookieData[$this->settings['token_field']] != $user[$this->Auth->userModel][$this->settings['token_field']]) ||
-			($cookieData[$this->settings['token_salt']] != $user[$this->Auth->userModel][$this->settings['token_salt']])) {
+		if (($cookieData[$this->settings['token_salt']] == $user[$this->settings['token_salt']] &&
+			$cookieData[$this->settings['token_field']] != $user[$this->settings['token_field']]) ||
+			($cookieData[$this->settings['token_salt']] != $user[$this->settings['token_salt']])) {
 				$this->logout(false, $user);
 				return true;
 			}
@@ -280,9 +290,9 @@ class RememberMeComponent extends Component {
 	public function clearTokens($id = '') {
 		$this->initializeModel();
 		$this->userModel->id = $id;
-		$userOverride[$this->Auth->userModel][$this->settings['token_field']] = null;
+		$userOverride[$this->settings['token_field']] = null;
 		if ($this->tokenSupports('token_salt')) {
-			$userOverride[$this->Auth->userModel][$this->settings['token_salt']] = null;
+			$userOverride[$this->settings['token_salt']] = null;
 		}
 		if ($id) {
 			$this->userModel->save($userOverride);
@@ -298,16 +308,16 @@ class RememberMeComponent extends Component {
 			$this->initializeModel();
 			if ($this->tokenSupports('token_field')) {
 				if ($this->tokenSupports('token_salt')) {
-					if (!empty($user[$this->Auth->userModel]['token_salt'])) {
-						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $user[$this->Auth->userModel]['token_salt'];
+					if (!empty($user['token_salt'])) {
+						$tokens[$this->settings['token_salt']] = $user['token_salt'];
 					} else {
-						$tokens[$this->Auth->userModel][$this->settings['token_salt']] = $this->generateHash();
+						$tokens[$this->settings['token_salt']] = $this->generateHash();
 					}
 				}
-				if (empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->Auth->user($this->settings['token_field'])) {
-					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->Auth->user($this->settings['token_field']);
+				if (empty($this->Controller->data[$this->settings['field_name']]) && $this->Auth->user($this->settings['token_field'])) {
+					$tokens[$this->settings['token_field']] = $this->Auth->user($this->settings['token_field']);
 				} else {
-					$tokens[$this->Auth->userModel][$this->settings['token_field']] = $this->generateHash();
+					$tokens[$this->settings['token_field']] = $this->generateHash();
 				}
 				return $tokens;
 			}
@@ -315,5 +325,3 @@ class RememberMeComponent extends Component {
 	}
 
 }
-
-?>
