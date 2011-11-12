@@ -35,3 +35,9 @@ Keeping cookie expiry dates in relation to the user's last action can be done in
 			$this->RememberMe->checkUser();
 		}
 	}
+
+##Log the User Out
+
+Reference the logout function in your logout action. You don't need to set any of the options generally. If you set redirect to false, Auth->logout() will be fired. By default, it's fired and the user is redirected to the configured logout action.
+
+	$this->RememberMe->logout($flushTokens = false, $user = array(), $redirect = true);
