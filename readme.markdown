@@ -9,11 +9,11 @@ This component was written very quickly and requires a lot of code cleaning up, 
 Install the plugin:
 
 	cd myapp
-	git clone git://github.com/voidet/remember_me.git remember_me
+	git clone git://github.com/voidet/remember_me.git app/Plugin/RememberMe
 
 Depending on which user controller you would like the RememberMe functions to work on, open up the controller and type in.
 
-	var $components = array('RememberMe.RememberMe');
+	public $components = array('RememberMe.RememberMe');
 
 In order to log a user in and set the cookie information you can use something like this in your login action in your controller:
 
