@@ -38,13 +38,7 @@ class RememberMeComponent extends Component {
 	*/
 	private function initializeModel() {
 		if (!isset($this->userModel)) {
-			$userModel = '';
-			foreach ($this->Auth->authenticate as $adapter) {
-				if (!empty($adapter['userModel'])) {
-					$userModel = $adapter['userModel'];
-					break;
-				}
-			}
+			$userModel = $this->AuthSettings['userModel'];
 			if (empty($userModel)) {
 				die('Please specify what user model to authenticate against');
 			}
