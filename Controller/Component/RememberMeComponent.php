@@ -115,6 +115,9 @@ class RememberMeComponent extends Component {
 				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
 			$tokenField = $this->Auth->userModel.'.'.$this->settings['token_field'];
 			$cookieData = $this->Cookie->read($this->Cookie->name);
+			if (empty($this->Auth->userScope)) {
+				$this->Auth->userScope = array();
+			}
 			unset($this->Auth->userScope[$tokenField]);
 			$this->Auth->userScope += array($tokenField => $cookieData[$this->settings['token_field']]);
 		}
