@@ -40,7 +40,7 @@ class RememberMeComponent extends Component {
 		if (!isset($this->userModel)) {
 			$userModel = $this->AuthSettings['userModel'];
 			if (empty($userModel)) {
-				die('Please specify what user model to authenticate against');
+				throw new BadMethodCallException('Please specify what user model to authenticate against');
 			}
 			App::import('Model', $userModel);
 			$this->userModel = new $userModel;
