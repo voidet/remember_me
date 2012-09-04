@@ -25,7 +25,8 @@ class RememberMeComponent extends Component {
 			'timeout' => '+1 month',
 			'field_name' => 'remember_me',
 			'token_field' => 'token',
-			'token_salt' => 'token_salt'
+			'token_salt' => 'token_salt',
+			'cookie_name' => 'remember_me'
 		);
 
 		$this->Controller = $Controller;
@@ -91,7 +92,7 @@ class RememberMeComponent extends Component {
 		if ($this->tokenSupports('token_salt')) {
 			$cookieData[$this->settings['token_salt']] = $tokens[$this->settings['token_salt']];
 		}
-		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
+		$this->Cookie->write($this->settings['cookie_name'], $cookieData, true, $this->settings['timeout']);
 	}
 
 /**
@@ -111,10 +112,10 @@ class RememberMeComponent extends Component {
 	* @return false
 	*/
 	protected function setUserScope() {
-		if ($this->Cookie->read($this->Cookie->name) &&
+		if ($this->Cookie->read($this->settings['cookie_name']) &&
 				empty($this->Controller->data[$this->Auth->userModel][$this->settings['field_name']]) && $this->tokenSupports('token_field')) {
 			$tokenField = $this->Auth->userModel.'.'.$this->settings['token_field'];
-			$cookieData = $this->Cookie->read($this->Cookie->name);
+			$cookieData = $this->Cookie->read($this->settings['cookie_name']);
 			unset($this->Auth->userScope[$tokenField]);
 			$this->Auth->userScope += array($tokenField => $cookieData[$this->settings['token_field']]);
 		}
@@ -126,9 +127,9 @@ class RememberMeComponent extends Component {
 	* @return false
 	*/
 	public function checkUser() {
-		if ($this->Cookie->read($this->Cookie->name) && !$this->Session->check('Auth.'.$this->Auth->userModel)) {
+		if ($this->Cookie->read($this->settings['cookie_name']) && !$this->Session->check('Auth.'.$this->Auth->userModel)) {
 
-			$cookieData = $this->Cookie->read($this->Cookie->name);
+			$cookieData = $this->Cookie->read($this->settings['cookie_name']);
 
 			if ($this->tokenSupports('token_field')) {
 				$userData = $this->checkTokens();
@@ -142,7 +143,7 @@ class RememberMeComponent extends Component {
 			}
 		}
 
-		if ($this->Cookie->read($this->Cookie->name) && $this->Session->check('Auth.'.$this->Auth->userModel)) {
+		if ($this->Cookie->read($this->settings['cookie_name']) && $this->Session->check('Auth.'.$this->Auth->userModel)) {
 			$this->rewriteCookie();
 		}
 	}
@@ -155,7 +156,7 @@ class RememberMeComponent extends Component {
 		if ($this->tokenSupports('token_field')) {
 			$this->initializeModel();
 			$fields = $this->setTokenFields();
-			$cookieData = $this->Cookie->read($this->Cookie->name);
+			$cookieData = $this->Cookie->read($this->settings['cookie_name']);
 			if (is_array($cookieData) && array_values($fields) === array_keys($cookieData)) {
 				$user = $this->getUserByTokens($cookieData);
 				if (!empty($user) && $this->tokenSupports('token_salt') && $this->handleHijack($cookieData, $user)) {
@@ -186,7 +187,7 @@ class RememberMeComponent extends Component {
 			foreach ($this->setBasicCookieFields() as $keyField) {
 				$cookieFields[] = $this->Controller->data[$this->Auth->userModel][$keyField];
 			}
-			$this->Cookie->write($this->Cookie->name, serialize($this->Controller->data), true, $this->settings['timeout']);
+			$this->Cookie->write($this->settings['cookie_name'], serialize($this->Controller->data), true, $this->settings['timeout']);
 		}
 	}
 
@@ -218,8 +219,8 @@ class RememberMeComponent extends Component {
 	* @return false
 	*/
 	public function rewriteCookie() {
-		$cookieData = $this->Cookie->read($this->Cookie->name);
-		$this->Cookie->write($this->Cookie->name, $cookieData, true, $this->settings['timeout']);
+		$cookieData = $this->Cookie->read($this->settings['cookie_name']);
+		$this->Cookie->write($this->settings['cookie_name'], $cookieData, true, $this->settings['timeout']);
 	}
 
 /**
